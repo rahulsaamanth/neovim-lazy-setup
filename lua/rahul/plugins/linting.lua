@@ -3,13 +3,37 @@ return {
 	event = { "BufReadPre", "BufNewFile" },
 	config = function()
 		local lint = require("lint")
-
+		
+		-- Check if local eslint exists in project
+		local function get_eslint_command()
+			local local_eslint = vim.fn.findfile("node_modules/.bin/eslint", vim.fn.getcwd() .. ";")
+			if local_eslint ~= "" then
+				return local_eslint
+			else
+				-- Fallback to eslint_d
+				return "eslint_d"
+			end
+		end
+		
+		-- Create a custom eslint linter that will use local eslint when available
+		lint.linters.eslint_project = {
+			cmd = get_eslint_command,
+			args = {
+				"--format", "json",
+				"--stdin",
+				"--stdin-filename", function() return vim.api.nvim_buf_get_name(0) end,
+			},
+			stdin = true,
+			parse = require("lint.linters.eslint").parse,
+			ignore_exitcode = true,
+		}
+		
 		lint.linters_by_ft = {
-			javascript = { "eslint_d" },
-			typescript = { "eslint_d" },
-			javascriptreact = { "eslint_d" },
-			typescriptreact = { "eslint_d" },
-			svelte = { "eslint_d" },
+			javascript = { "eslint_project" },
+			typescript = { "eslint_project" },
+			javascriptreact = { "eslint_project" },
+			typescriptreact = { "eslint_project" },
+			svelte = { "eslint_project" },
 			python = { "pylint" },
 		}
 
